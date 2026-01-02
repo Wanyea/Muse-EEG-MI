@@ -1,0 +1,30 @@
+{
+  "session_id": "wanyea_20260102_000656",
+  "subject_id": "wanyea",
+  "started_unix": 1767330416.4531088,
+  "fs": 256,
+  "channels": [
+    "tp9",
+    "af7",
+    "af8",
+    "tp10"
+  ],
+  "montage": {
+    "system": "MuseS",
+    "channels": [
+      "tp9",
+      "af7",
+      "af8",
+      "tp10"
+    ],
+    "labels_10_20": {
+      "tp9": "TP9",
+      "af7": "AF7",
+      "af8": "AF8",
+      "tp10": "TP10"
+    }
+  },
+  "extra_meta": {
+    "preset": "p1041"
+  }
+}

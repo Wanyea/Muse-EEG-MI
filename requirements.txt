@@ -1,0 +1,11 @@
+bleak
+flask
+flask-socketio
+flask-cors
+python-osc
+numpy
+scipy
+pandas
+scikit-learn
+mne-lsl
+vispy

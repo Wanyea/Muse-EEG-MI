@@ -1,0 +1,173 @@
+{
+  "exported": [
+    {
+      "trial_id": 1,
+      "label": "UP",
+      "file": "trial_0001_UP.csv",
+      "n_samples": 753,
+      "epoch_start_ts": 1767330422.8516867,
+      "epoch_end_ts": 1767330425.8516867
+    },
+    {
+      "trial_id": 2,
+      "label": "UP",
+      "file": "trial_0002_UP.csv",
+      "n_samples": 768,
+      "epoch_start_ts": 1767330430.8754423,
+      "epoch_end_ts": 1767330433.8754423
+    },
+    {
+      "trial_id": 3,
+      "label": "RIGHT",
+      "file": "trial_0003_RIGHT.csv",
+      "n_samples": 770,
+      "epoch_start_ts": 1767330439.2281873,
+      "epoch_end_ts": 1767330442.2281873
+    },
+    {
+      "trial_id": 4,
+      "label": "UP",
+      "file": "trial_0004_UP.csv",
+      "n_samples": 775,
+      "epoch_start_ts": 1767330447.254718,
+      "epoch_end_ts": 1767330450.254718
+    },
+    {
+      "trial_id": 5,
+      "label": "RIGHT",
+      "file": "trial_0005_RIGHT.csv",
+      "n_samples": 768,
+      "epoch_start_ts": 1767330455.2758787,
+      "epoch_end_ts": 1767330458.2758787
+    },
+    {
+      "trial_id": 6,
+      "label": "DOWN",
+      "file": "trial_0006_DOWN.csv",
+      "n_samples": 774,
+      "epoch_start_ts": 1767330463.3001506,
+      "epoch_end_ts": 1767330466.3001506
+    },
+    {
+      "trial_id": 7,
+      "label": "RIGHT",
+      "file": "trial_0007_RIGHT.csv",
+      "n_samples": 769,
+      "epoch_start_ts": 1767330471.3207686,
+      "epoch_end_ts": 1767330474.3207686
+    },
+    {
+      "trial_id": 8,
+      "label": "LEFT",
+      "file": "trial_0008_LEFT.csv",
+      "n_samples": 772,
+      "epoch_start_ts": 1767330479.610432,
+      "epoch_end_ts": 1767330482.610432
+    },
+    {
+      "trial_id": 9,
+      "label": "DOWN",
+      "file": "trial_0009_DOWN.csv",
+      "n_samples": 775,
+      "epoch_start_ts": 1767330487.6344507,
+      "epoch_end_ts": 1767330490.6344507
+    },
+    {
+      "trial_id": 10,
+      "label": "DOWN",
+      "file": "trial_0010_DOWN.csv",
+      "n_samples": 770,
+      "epoch_start_ts": 1767330495.6456728,
+      "epoch_end_ts": 1767330498.6456728
+    },
+    {
+      "trial_id": 11,
+      "label": "LEFT",
+      "file": "trial_0011_LEFT.csv",
+      "n_samples": 769,
+      "epoch_start_ts": 1767330503.9885244,
+      "epoch_end_ts": 1767330506.9885244
+    },
+    {
+      "trial_id": 12,
+      "label": "RIGHT",
+      "file": "trial_0012_RIGHT.csv",
+      "n_samples": 770,
+      "epoch_start_ts": 1767330511.9999402,
+      "epoch_end_ts": 1767330514.9999402
+    },
+    {
+      "trial_id": 13,
+      "label": "UP",
+      "file": "trial_0013_UP.csv",
+      "n_samples": 770,
+      "epoch_start_ts": 1767330520.0208127,
+      "epoch_end_ts": 1767330523.0208127
+    },
+    {
+      "trial_id": 14,
+      "label": "RIGHT",
+      "file": "trial_0014_RIGHT.csv",
+      "n_samples": 769,
+      "epoch_start_ts": 1767330528.0353034,
+      "epoch_end_ts": 1767330531.0353034
+    },
+    {
+      "trial_id": 15,
+      "label": "RIGHT",
+      "file": "trial_0015_RIGHT.csv",
+      "n_samples": 772,
+      "epoch_start_ts": 1767330536.2541065,
+      "epoch_end_ts": 1767330539.2541065
+    },
+    {
+      "trial_id": 16,
+      "label": "LEFT",
+      "file": "trial_0016_LEFT.csv",
+      "n_samples": 768,
+      "epoch_start_ts": 1767330544.267434,
+      "epoch_end_ts": 1767330547.267434
+    },
+    {
+      "trial_id": 17,
+      "label": "UP",
+      "file": "trial_0017_UP.csv",
+      "n_samples": 762,
+      "epoch_start_ts": 1767330552.2912514,
+      "epoch_end_ts": 1767330555.2912514
+    },
+    {
+      "trial_id": 18,
+      "label": "RIGHT",
+      "file": "trial_0018_RIGHT.csv",
+      "n_samples": 768,
+      "epoch_start_ts": 1767330560.6670969,
+      "epoch_end_ts": 1767330563.6670969
+    },
+    {
+      "trial_id": 19,
+      "label": "RIGHT",
+      "file": "trial_0019_RIGHT.csv",
+      "n_samples": 773,
+      "epoch_start_ts": 1767330568.846949,
+      "epoch_end_ts": 1767330571.846949
+    },
+    {
+      "trial_id": 20,
+      "label": "UP",
+      "file": "trial_0020_UP.csv",
+      "n_samples": 773,
+      "epoch_start_ts": 1767330576.8570454,
+      "epoch_end_ts": 1767330579.8570454
+    }
+  ],
+  "epoch_offset_s": 0.5,
+  "epoch_len_s": 3.0,
+  "fs": 256,
+  "channels": [
+    "tp9",
+    "af7",
+    "af8",
+    "tp10"
+  ]
+}

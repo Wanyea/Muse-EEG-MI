@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Muse MI Trainer</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 16px; }
+      .row { display: flex; gap: 16px; }
+      .card { border: 1px solid #ccc; padding: 12px; border-radius: 8px; width: 100%; }
+      #cue { font-size: 96px; text-align: center; height: 140px; line-height: 140px; }
+      button { padding: 10px 14px; margin-right: 8px; }
+      pre { background: #f6f6f6; padding: 10px; border-radius: 8px; overflow:auto; }
+      .small { color:#666; font-size: 12px; }
+      .kv { display:grid; grid-template-columns: 120px 1fr; gap:6px; }
+    </style>
+  </head>
+  <body>
+    <h2>Muse S Motor Imagery Trainer (v1)</h2>
+
+    <div class="row">
+      <div class="card">
+        <h3>Session</h3>
+        <div class="kv">
+          <div>Subject ID</div>
+          <div><input id="subjectId" value="subject0"/></div>
+
+          <div>Session ID</div>
+          <div><span id="sessionId">-</span></div>
+        </div>
+        <br/>
+        <button id="startSessionBtn">Start Session</button>
+        <button id="endSessionBtn">End Session</button>
+        <button id="exportBtn">Export Trials</button>
+        <button id="trainBtn">Train Model</button>
+        <div class="small">Export slices each trial epoch and trains LDA on bandpower features.</div>
+      </div>
+
+      <div class="card">
+        <h3>Live Signals</h3>
+        <div id="live"></div>
+        <div class="small">Updates at ~30Hz (from your Socket.IO stream).</div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px;">
+        <button id="refreshSessionsBtn">Refresh Sessions</button>
+        <select id="sessionsDropdown" style="min-width:280px;"></select>
+        <button id="trainSelectedBtn">Train Selected Session</button>
+    </div>
+    <div class="small">Trains on an older session that already has Export Trials.</div>
+    
+
+    <div class="row" style="margin-top:16px;">
+      <div class="card">
+        <h3>Cue Runner</h3>
+        <div id="cue">•</div>
+        <div>
+          <button id="runBlockBtn">Run Block (random)</button>
+          <button id="stopBlockBtn">Stop</button>
+        </div>
+        <div class="small">
+          Trial timing: fixation → cue → imagery → relax. Uses server-side protocol defaults.
+        </div>
+        <h4>Last Prediction</h4>
+        <pre id="predOut">{}</pre>
+      </div>
+
+      <div class="card">
+        <h3>Logs</h3>
+        <pre id="log"></pre>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
