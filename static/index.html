@@ -1,77 +1,155 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Muse MI Trainer</title>
-    <style>
-      body { font-family: Arial, sans-serif; margin: 16px; }
-      .row { display: flex; gap: 16px; }
-      .card { border: 1px solid #ccc; padding: 12px; border-radius: 8px; width: 100%; }
-      #cue { font-size: 96px; text-align: center; height: 140px; line-height: 140px; }
-      button { padding: 10px 14px; margin-right: 8px; }
-      pre { background: #f6f6f6; padding: 10px; border-radius: 8px; overflow:auto; }
-      .small { color:#666; font-size: 12px; }
-      .kv { display:grid; grid-template-columns: 120px 1fr; gap:6px; }
-    </style>
-  </head>
-  <body>
-    <h2>Muse S Motor Imagery Trainer (v1)</h2>
+<head>
+  <meta charset="utf-8" />
+  <title>Muse MI Trainer</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card { border: 1px solid #ccc; padding: 12px; border-radius: 10px; }
+    .row { display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+    button { padding: 10px 14px; }
+    select, input { padding: 8px; }
+    pre { background:#f6f6f6; padding:10px; border-radius:10px; overflow:auto; }
+    .small { color:#666; font-size: 12px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 6px; font-size: 13px; }
+    th { text-align:left; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#eee; margin-right:6px; }
+  </style>
+</head>
+<body>
+  <h2>Muse MI Trainer</h2>
 
-    <div class="row">
-      <div class="card">
-        <h3>Session</h3>
-        <div class="kv">
-          <div>Subject ID</div>
-          <div><input id="subjectId" value="subject0"/></div>
+  <div class="grid">
+    <div class="card">
+      <h3>Live Signals</h3>
+      <div id="live"></div>
+      <div class="small">If EEG values change, streaming is healthy.</div>
+    </div>
 
-          <div>Session ID</div>
-          <div><span id="sessionId">-</span></div>
-        </div>
-        <br/>
+    <div class="card">
+      <h3>Run Session</h3>
+      <div class="row">
+        <label>Subject</label>
+        <input id="subjectId" value="subject0" />
         <button id="startSessionBtn">Start Session</button>
         <button id="endSessionBtn">End Session</button>
+      </div>
+
+      <hr/>
+
+      <h4>Class Mode</h4>
+      <div class="row">
+        <label><input type="checkbox" class="cls" value="LEFT" checked /> LEFT</label>
+        <label><input type="checkbox" class="cls" value="RIGHT" checked /> RIGHT</label>
+        <label><input type="checkbox" class="cls" value="UP" /> UP</label>
+        <label><input type="checkbox" class="cls" value="DOWN" /> DOWN</label>
+      </div>
+
+      <div class="row">
+        <label>Trials</label>
+        <input id="nTrials" type="number" value="20" min="4" step="1" style="width:90px;" />
+        <button id="runBlockBtn">Run Block (Training Mode)</button>
+        <button id="stopBlockBtn">Stop</button>
+      </div>
+
+      <div class="small">
+        Training Mode uses a full-screen overlay with fixation dot during rest and arrows only during imagery to reduce eye movement artifacts.
+      </div>
+
+      <hr/>
+
+      <div class="row">
         <button id="exportBtn">Export Trials</button>
-        <button id="trainBtn">Train Model</button>
-        <div class="small">Export slices each trial epoch and trains LDA on bandpower features.</div>
       </div>
 
-      <div class="card">
-        <h3>Live Signals</h3>
-        <div id="live"></div>
-        <div class="small">Updates at ~30Hz (from your Socket.IO stream).</div>
+      <h4>Last Prediction</h4>
+      <pre id="predOut">{}</pre>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:16px;">
+    <div class="card">
+      <h3>Sessions + Metrics</h3>
+      <div class="row">
+        <button id="refreshSessionsBtn">Refresh</button>
+        <button id="trainSelectedBtn">Train Selected</button>
+      </div>
+      <div class="small">Guards: will refuse multi-session training if sessions don’t contain the selected classes.</div>
+      <div style="margin-top:10px; max-height:260px; overflow:auto;">
+        <table id="sessionsTable">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th>Session</th>
+              <th>Trials</th>
+              <th>Classes</th>
+              <th>Last Acc</th>
+              <th>Last BAcc</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
 
-    <div style="margin-top:10px;">
-        <button id="refreshSessionsBtn">Refresh Sessions</button>
-        <select id="sessionsDropdown" style="min-width:280px;"></select>
-        <button id="trainSelectedBtn">Train Selected Session</button>
+    <div class="card">
+      <h3>Confusion Matrix</h3>
+      <div id="cmInfo" class="small"></div>
+      <div id="cmPlot" style="height:360px;"></div>
+      <pre id="trainOut">{}</pre>
     </div>
-    <div class="small">Trains on an older session that already has Export Trials.</div>
-    
+  </div>
 
-    <div class="row" style="margin-top:16px;">
-      <div class="card">
-        <h3>Cue Runner</h3>
-        <div id="cue">•</div>
-        <div>
-          <button id="runBlockBtn">Run Block (random)</button>
-          <button id="stopBlockBtn">Stop</button>
-        </div>
-        <div class="small">
-          Trial timing: fixation → cue → imagery → relax. Uses server-side protocol defaults.
-        </div>
-        <h4>Last Prediction</h4>
-        <pre id="predOut">{}</pre>
+  <div class="card" style="margin-top:16px;">
+    <h3>Logs</h3>
+    <pre id="log"></pre>
+  </div>
+
+  <!-- TRAINING OVERLAY (FULL SCREEN) -->
+  <div id="trainingOverlay" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#000;
+    color:#fff;
+    z-index:9999;
+  ">
+    <div style="
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:24px;
+      text-align:center;
+      padding:24px;
+    ">
+      <div id="trainingTop" style="position:absolute; top:16px; left:16px; right:16px; display:flex; justify-content:space-between; font-size:18px;">
+        <div id="trainingProgress">Trial 0/0</div>
+        <div id="trainingHint">ESC to exit</div>
       </div>
 
-      <div class="card">
-        <h3>Logs</h3>
-        <pre id="log"></pre>
+      <div id="trainingCountdown" style="font-size:56px; opacity:0.9;"></div>
+
+      <div id="trainingCue" style="
+        font-size:260px;
+        font-weight:700;
+        line-height:1;
+        user-select:none;
+      ">•</div>
+
+      <div id="trainingStatus" style="font-size:28px; opacity:0.9;"></div>
+
+      <div style="position:absolute; bottom:24px; display:flex; gap:12px;">
+        <button id="overlayStopBtn" style="padding:14px 18px; font-size:18px;">Stop</button>
       </div>
     </div>
+  </div>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="/static/app.js"></script>
-  </body>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
 </html>

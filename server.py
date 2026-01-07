@@ -19,7 +19,7 @@ import asyncio
 import argparse
 import threading
 import random
-from collections import deque
+from collections import deque, Counter
 
 import numpy as np
 import pandas as pd
@@ -110,7 +110,7 @@ protocol = DEFAULT_PROTOCOL.copy()
 last_prediction = {}
 
 # -------------------------
-# UTILS: UI emit + record, list & vaLidate sessions
+# HELPERS
 # -------------------------
 def _record_and_emit():
     global LAST_EMIT
@@ -141,6 +141,60 @@ def _validate_session_dir(session_dir: str):
     if not os.path.exists(export_index):
         return False, "export_index.json not found. You must Export Trials for that session first."
     return True, ""
+
+def _session_path(session_id: str) -> str:
+    return os.path.join(DATA_DIR, session_id)
+
+def _load_json(path: str):
+    if not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
+        return json.load(f)
+
+def _write_json(path: str, obj):
+    with open(path, "w") as f:
+        json.dump(obj, f, indent=2)
+
+def _session_export_index(session_dir: str):
+    return os.path.join(session_dir, "export_index.json")
+
+def _session_train_results(session_dir: str):
+    return os.path.join(session_dir, "train_results.json")
+
+def _summarize_session(session_dir: str):
+    meta = _load_json(os.path.join(session_dir, "session_meta.json")) or {}
+    export = _load_json(_session_export_index(session_dir)) or {}
+    exported = export.get("exported", [])
+    class_counts = Counter([e.get("label") for e in exported if e.get("label")])
+
+    train_results = _load_json(_session_train_results(session_dir))
+
+    return {
+        "session_id": os.path.basename(session_dir),
+        "path": session_dir,
+        "subject_id": meta.get("subject_id"),
+        "n_exported_trials": int(len(exported)),
+        "class_counts": dict(class_counts),
+        "last_train": train_results,  # may be None
+    }
+
+def _validate_sessions_for_training(session_ids, selected_classes):
+    """Ensure each session exists, has export_index, and contains all selected_classes."""
+    summaries = []
+    for sid in session_ids:
+        sdir = _session_path(sid)
+        if not os.path.isdir(sdir):
+            return None, f"Session not found: {sid}"
+        export = _load_json(_session_export_index(sdir))
+        if not export:
+            return None, f"{sid}: export_index.json not found (Export Trials first)."
+        labels = [e.get("label") for e in export.get("exported", [])]
+        counts = Counter(labels)
+        missing = [c for c in selected_classes if counts.get(c, 0) == 0]
+        if missing:
+            return None, f"{sid}: missing classes {missing}. Choose different sessions or classes."
+        summaries.append(_summarize_session(sdir))
+    return summaries, ""
 
 # -------------------------
 # DECODE + OSC + UPDATE
@@ -368,10 +422,21 @@ def block_start():
 
     payload = request.json or {}
     n_trials = int(payload.get("n_trials", 20))
-    labels = protocol["classes"]
-    block_queue = [random.choice(labels) for _ in range(n_trials)]
+    classes = payload.get("classes", protocol["classes"])
+
+    if not classes or len(classes) < 2:
+        return jsonify({"error": "Select at least 2 classes."}), 400
+
+    # balanced queue: repeat classes evenly, then shuffle
+    reps = max(1, n_trials // len(classes))
+    block_queue = (classes * reps)[:n_trials]
+    # if n_trials not divisible, append remaining
+    while len(block_queue) < n_trials:
+        block_queue.append(classes[len(block_queue) % len(classes)])
+
+    random.shuffle(block_queue)
     block_active = True
-    return jsonify({"ok": True, "n_trials": n_trials})
+    return jsonify({"ok": True, "n_trials": n_trials, "classes": classes})
 
 @app.route("/block/stop", methods=["POST"])
 def block_stop():
@@ -461,7 +526,7 @@ def predict_last():
     """
     global last_prediction
     if not model.is_fit:
-        return jsonify({"status": "not_trained", "message": "Model not trained yet. Run Export Trials, then Train Model."}), 200
+        return jsonify({"status": "not_trained", "message": "Train a model first."}), 200
 
     if not recorder.trials:
         return jsonify({"status": "no_trials", "message": "No trials recorded yet."}), 200
@@ -490,8 +555,17 @@ def predict_last():
 
 @app.route("/sessions", methods=["GET"])
 def sessions_list():
-    return jsonify({"sessions": _list_session_dirs(DATA_DIR)})
+    if not os.path.exists(DATA_DIR):
+        return jsonify({"sessions": []})
 
+    sessions = []
+    for name in sorted(os.listdir(DATA_DIR), reverse=True):
+        p = os.path.join(DATA_DIR, name)
+        if os.path.isdir(p) and os.path.exists(os.path.join(p, "session_meta.json")):
+            sessions.append(_summarize_session(p))
+    return jsonify({"sessions": sessions})
+
+# Train on single session
 @app.route("/train_session", methods=["POST"])
 def train_session():
     payload = request.json or {}
@@ -510,6 +584,111 @@ def train_session():
     out = model.train_from_session_dir(session_dir)
     out["trained_on_session_id"] = session_id
     return jsonify(out)
+
+# Train on multuple sessions validating that sessions all contain selected classes
+@app.route("/train_sessions", methods=["POST"])
+def train_sessions():
+    payload = request.json or {}
+    session_ids = payload.get("session_ids", [])
+    selected_classes = payload.get("classes", [])
+
+    if not session_ids or not isinstance(session_ids, list):
+        return jsonify({"error": "session_ids must be a non-empty list"}), 400
+    if not selected_classes or not isinstance(selected_classes, list):
+        return jsonify({"error": "classes must be a non-empty list"}), 400
+
+    summaries, msg = _validate_sessions_for_training(session_ids, selected_classes)
+    if summaries is None:
+        return jsonify({"error": msg}), 400
+
+    # Train each session individually (and persist its own results)
+    per_session = {}
+    for sid in session_ids:
+        sdir = _session_path(sid)
+        result = model.train_from_session_dir(sdir, allowed_classes=selected_classes)
+        # persist session-level results
+        _write_json(_session_train_results(sdir), {
+            **result,
+            "trained_on": sid,
+            "trained_at_unix": time.time(),
+            "classes_selected": selected_classes,
+        })
+        per_session[sid] = result
+
+    # Also train a combined model across all selected sessions
+    # (merge features/labels)
+    X_all, y_all = [], []
+    for sid in session_ids:
+        sdir = _session_path(sid)
+        export = _load_json(_session_export_index(sdir)) or {}
+        for item in export.get("exported", []):
+            if item.get("label") not in selected_classes:
+                continue
+            csv_path = os.path.join(sdir, item["file"])
+            if not os.path.exists(csv_path):
+                continue
+            df = pd.read_csv(csv_path)
+            x = df[EEG_CHANNELS].to_numpy(dtype=float)
+            X_all.append(model.pipeline.named_steps["scaler"].fit_transform([[0]*12])[0] if False else None)  # no-op placeholder
+
+    # Use MIModel logic by training on a temp “combined” directory-less path:
+    # easiest: re-use MIModel._load_exported_trials by building arrays directly here:
+    from mi.features import bandpower_features
+    X_all, y_all = [], []
+    for sid in session_ids:
+        sdir = _session_path(sid)
+        export = _load_json(_session_export_index(sdir)) or {}
+        for item in export.get("exported", []):
+            if item.get("label") not in selected_classes:
+                continue
+            csv_path = os.path.join(sdir, item["file"])
+            df = pd.read_csv(csv_path)
+            x = df[EEG_CHANNELS].to_numpy(dtype=float)
+            X_all.append(bandpower_features(x, fs=model.fs))
+            y_all.append(item["label"])
+
+    X_all = np.vstack(X_all)
+    y_all = np.array(y_all)
+
+    # Build combined metrics using same approach as in MIModel
+    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+    from sklearn.metrics import confusion_matrix, accuracy_score, balanced_accuracy_score
+
+    classes = [c for c in selected_classes if c in set(y_all.tolist())]
+    n_splits = min(5, int(np.min(np.bincount(pd.Categorical(y_all, categories=classes).codes))))
+    if n_splits < 2:
+        n_splits = 2
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    y_pred = cross_val_predict(model.pipeline, X_all, y_all, cv=cv)
+
+    acc = float(accuracy_score(y_all, y_pred))
+    bacc = float(balanced_accuracy_score(y_all, y_pred))
+    cm = confusion_matrix(y_all, y_pred, labels=classes).astype(int)
+
+    per_class = {}
+    for i, c in enumerate(classes):
+        denom = int(cm[i, :].sum())
+        per_class[c] = float(cm[i, i] / denom) if denom > 0 else 0.0
+
+    # Fit final combined model (this is what /predict_last uses going forward)
+    model.pipeline.fit(X_all, y_all)
+    model.is_fit = True
+    model.classes_ = classes
+
+    combined = {
+        "trained_on_sessions": session_ids,
+        "classes": classes,
+        "n_trials": int(len(y_all)),
+        "accuracy": acc,
+        "balanced_accuracy": bacc,
+        "confusion_matrix": cm.tolist(),
+        "per_class_accuracy": per_class,
+    }
+
+    return jsonify({
+        "combined": combined,
+        "per_session": per_session,
+    })
 
 # -------------------------
 # Simple aggregate endpoints (kept)
